@@ -1,6 +1,4 @@
 // Copyright (c) RazorConsole. All rights reserved.
-// tvkit fork: hardware cursor delegation for live diff display.
-// Author: Grok (xAI) (supervised)
 
 using RazorConsole.Core.Focus;
 using RazorConsole.Core.Input;
