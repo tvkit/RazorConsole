@@ -1,27 +1,35 @@
 <Project Sdk="Microsoft.NET.Sdk.Razor">
 
-  <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
-    <AssemblyName>RazorConsole.Core</AssemblyName>
-    <RootNamespace>RazorConsole.Core</RootNamespace>
-    <Version>0.5.0-tvkit.1</Version>
-    <IsPackable>false</IsPackable>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <LangVersion>latest</LangVersion>
-    <NoWarn>$(NoWarn);CS1591;BL0007</NoWarn>
-    <GenerateDocumentationFile>false</GenerateDocumentationFile>
-  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Components" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.Web" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" />
+    <PackageReference Include="Spectre.Console" />
+    <PackageReference Include="ColorCode.Core" />
+    <PackageReference Include="Markdig" />
+  </ItemGroup>
+  <Import Project="$(RepoRoot)/nuget/nuget-package.props" />
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.Components" Version="10.0.0" />
-    <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.0.0" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.0" />
-    <PackageReference Include="Spectre.Console" Version="0.54.0" />
-    <PackageReference Include="ColorCode.Core" Version="2.0.15" />
-    <PackageReference Include="Markdig" Version="0.43.0" />
+    <InternalsVisibleTo Include="RazorConsole.Tests" />
+    <InternalsVisibleTo Include="RazorConsole.Website" />
+    <InternalsVisibleTo Include="DynamicProxyGenAssembly2" />
   </ItemGroup>
+
+  <PropertyGroup>
+    <Version>0.5.0-tvkit.1</Version>
+    <IsPackable>false</IsPackable>
+    <IsAotCompatible>true</IsAotCompatible>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <NoWarn>$(NoWarn);BL0007</NoWarn>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
 
 </Project>
