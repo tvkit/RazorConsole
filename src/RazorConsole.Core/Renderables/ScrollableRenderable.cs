@@ -144,7 +144,9 @@ internal sealed class ScrollableRenderable : IRenderable
             }
         }
 
-        var contentWidth = maxWidth - reserve;
+        // Pad/inject through full maxWidth so the embedded thumb column lines up with
+        // other Expand=true chrome (e.g. TextInput borders) on the same row width.
+        var contentWidth = maxWidth;
         foreach (var segment in ProcessAndRenderEmbedded(tempLines, dataStart, dataEnd, options, hasBorder, contentWidth))
         {
             yield return segment;
@@ -162,7 +164,7 @@ internal sealed class ScrollableRenderable : IRenderable
 
         var (dataStart, dataEnd) = FindTableContentRange(tempLines, originalTable);
 
-        var contentWidth = _scrollbarSettings != null ? maxWidth - 1 : maxWidth;
+        var contentWidth = maxWidth;
         foreach (var segment in ProcessAndRenderEmbedded(tempLines, dataStart, dataEnd, options, hasBorder: true, contentWidth))
         {
             yield return segment;
