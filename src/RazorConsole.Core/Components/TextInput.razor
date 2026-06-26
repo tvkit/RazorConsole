@@ -19,6 +19,9 @@
     data-focus-order="@FocusOrderAttribute"
     data-expand="@ExpandAttribute"
     data-placeholder="@PlaceholderAttribute"
+    data-label="@LabelAttribute"
+    data-prefix="@PrefixAttribute"
+    data-content-padding-left="@ContentPaddingLeftAttribute"
     data-mask-input="@MaskInputAttribute"
     data-has-value="@HasValueAttribute"
     value="@_currentValue"
@@ -119,6 +122,12 @@
     /// </remarks>
     [Parameter]
     public Decoration LabelDecoration { get; set; } = Decoration.None;
+
+    /// <summary>
+    /// Permanent inline prefix rendered before the value or placeholder.
+    /// </summary>
+    [Parameter]
+    public string? Prefix { get; set; }
 
     /// <summary>
     /// Placeholder text shown when input is empty.
@@ -254,6 +263,13 @@
 
     private string? PlaceholderAttribute => string.IsNullOrWhiteSpace(Placeholder) ? null : Placeholder;
 
+    private string? LabelAttribute => string.IsNullOrWhiteSpace(Label) ? null : Label;
+
+    private string? PrefixAttribute => string.IsNullOrWhiteSpace(Prefix) ? null : Prefix;
+
+    private string ContentPaddingLeftAttribute =>
+        ContentPadding.Left.ToString(CultureInfo.InvariantCulture);
+
     private string HasValueAttribute => HasValue ? "true" : "false";
 
     private string MaskInputAttribute => MaskInput ? "true" : "false";
@@ -268,23 +284,37 @@
     {
         get
         {
+            var prefix = Prefix ?? string.Empty;
+
             if (!HasValue)
             {
-                return Placeholder ?? string.Empty;
+                if (!string.IsNullOrWhiteSpace(Placeholder))
+                {
+                    return prefix + Placeholder;
+                }
+
+                return prefix;
             }
 
             if (!MaskInput)
             {
-                return _currentValue;
+                return prefix + _currentValue;
             }
 
-            return new string('•', _currentValue.Length);
+            return prefix + new string('•', _currentValue.Length);
         }
     }
 
-    private Color DisplayForeground => HasValue ? ValueColor : PlaceholderColor;
+    private bool UseValueStyle => HasValue || ShowsPrefixOnly;
 
-    private Decoration DisplayDecoration => HasValue ? Decoration.None : PlaceholderDecoration;
+    private bool ShowsPrefixOnly =>
+        !HasValue
+        && !string.IsNullOrEmpty(Prefix)
+        && string.IsNullOrWhiteSpace(Placeholder);
+
+    private Color DisplayForeground => UseValueStyle ? ValueColor : PlaceholderColor;
+
+    private Decoration DisplayDecoration => UseValueStyle ? Decoration.None : PlaceholderDecoration;
 
     protected override void OnParametersSet()
     {
@@ -335,6 +365,10 @@
         {
             await OnSubmit.InvokeAsync(submittedValue).ConfigureAwait(false);
         }
+
+        _currentValue = string.Empty;
+        _lastIncomingValue = string.Empty;
+        await InvokeAsync(StateHasChanged).ConfigureAwait(false);
     }
 
     private async Task HandleFocusAsync(FocusEventArgs args)

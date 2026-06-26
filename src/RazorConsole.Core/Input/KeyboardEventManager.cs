@@ -218,6 +218,8 @@ internal sealed class KeyboardEventManager
             var changeArgs = new ChangeEventArgs { Value = value };
             await DispatchAsync(changeEvent, changeArgs, token).ConfigureAwait(false);
         }
+
+        GetOrCreateBuffer(target).Clear();
     }
 
     private async Task DispatchAsync(VNodeEvent @event, EventArgs args, CancellationToken token)
@@ -285,19 +287,53 @@ internal sealed class KeyboardEventManager
     /// </summary>
     internal int GetTextInputCaretColumn(FocusManager.FocusTarget target)
     {
-        const int contentStartColumn = 3;
+        const int contentStartBeforePadding = 2;
 
-        var buffer = GetOrCreateBuffer(target);
-        var displayLength = buffer.Length;
+        // Keyboard buffer leads during typing; ignore stale bound value after submit/backspace.
+        var displayLength = GetOrCreateBuffer(target).Length;
         if (displayLength == 0
             && target.Attributes.TryGetValue("data-placeholder", out var placeholder)
-            && !string.IsNullOrEmpty(placeholder))
+            && !string.IsNullOrEmpty(placeholder)
+            && !HasPrefix(target))
         {
             displayLength = placeholder.Length;
         }
 
-        return contentStartColumn + displayLength;
+        var prefixLength = GetPrefixLength(target);
+        var labelLength = prefixLength == 0 ? GetLabelLength(target) : 0;
+
+        return contentStartBeforePadding
+            + GetContentPaddingLeft(target)
+            + prefixLength
+            + labelLength
+            + displayLength;
     }
+
+    private static int GetContentPaddingLeft(FocusManager.FocusTarget target)
+    {
+        if (!target.Attributes.TryGetValue("data-content-padding-left", out var value)
+            || !int.TryParse(value, out var paddingLeft)
+            || paddingLeft < 0)
+        {
+            return 1;
+        }
+
+        return paddingLeft;
+    }
+
+    private static bool HasPrefix(FocusManager.FocusTarget target) =>
+        target.Attributes.TryGetValue("data-prefix", out var prefix)
+        && !string.IsNullOrEmpty(prefix);
+
+    private static int GetPrefixLength(FocusManager.FocusTarget target) =>
+        HasPrefix(target) && target.Attributes.TryGetValue("data-prefix", out var prefix) && prefix is not null
+            ? prefix.Length
+            : 0;
+
+    private static int GetLabelLength(FocusManager.FocusTarget target) =>
+        target.Attributes.TryGetValue("data-label", out var label) && !string.IsNullOrEmpty(label)
+            ? label.Length
+            : 0;
 
     private StringBuilder GetOrCreateBuffer(FocusManager.FocusTarget target)
     {
