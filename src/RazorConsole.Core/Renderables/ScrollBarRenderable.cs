@@ -55,6 +55,11 @@ internal sealed class ScrollBarRenderable(
 
     private static int CalculateThumbSize(int viewportHeight, int itemsCount, int pageSize, int minThumbHeight)
     {
+        if (itemsCount <= pageSize)
+        {
+            return 0;
+        }
+
         // Thumb size represents the proportion of visible items to total items
         var proportionalSize = (int)Math.Ceiling((double)pageSize / itemsCount * viewportHeight);
         return Math.Max(minThumbHeight, Math.Min(proportionalSize, viewportHeight));
