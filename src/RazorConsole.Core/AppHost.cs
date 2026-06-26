@@ -85,7 +85,7 @@ internal class ComponentService<[DynamicallyAccessedMembers(DynamicallyAccessedM
     KeyboardEventManager keyboardEventManager,
     TerminalMonitor terminalMonitor) : BackgroundService where TComponent : IComponent
 {
-    private readonly SemaphoreSlim _renderSemaphore = new(1, 1);
+    private readonly SemaphoreSlim _renderLock = new(1, 1);
 
     /// <summary>
     /// Ensures exceptions that occur during component execution are surfaced when the host stops.
@@ -122,26 +122,36 @@ internal class ComponentService<[DynamicallyAccessedMembers(DynamicallyAccessedM
             AnsiConsole.Clear();
         }
 
-        using var liveContext = new ConsoleLiveDisplayContext(new LiveDisplayCanvas(options.ConsoleLiveDisplayOptions, AnsiConsole.Console), consoleRenderer, terminalMonitor, null);
-        using var _ = consoleRenderer.Subscribe(focusManager);
-        using var focusSession = focusManager.BeginSession(liveContext, initialView, token);
-        await focusSession.InitializationTask.ConfigureAwait(false);
-        var keyListenerTask = keyboardEventManager.RunAsync(token);
-        if (options.EnableTerminalResizing)
+        LiveDisplayCursorSync.Attach(focusManager, keyboardEventManager);
+
+        try
         {
-            terminalMonitor.Start(token);
+            using var liveContext = new ConsoleLiveDisplayContext(new LiveDisplayCanvas(AnsiConsole.Console), consoleRenderer, terminalMonitor, null);
+            using var rendererSubscription = consoleRenderer.Subscribe(focusManager);
+            using var focusSession = focusManager.BeginSession(liveContext, initialView, token);
+            await focusSession.InitializationTask.ConfigureAwait(false);
+            _ = keyboardEventManager.RunAsync(token);
+            if (options.EnableTerminalResizing)
+            {
+                terminalMonitor.Start(token);
+            }
+
+            await callback(liveContext, initialView, token).ConfigureAwait(false);
+
+            await Task.Delay(Timeout.InfiniteTimeSpan, token).ConfigureAwait(false);
         }
-
-        await callback(liveContext, initialView, token).ConfigureAwait(false);
-
-        await Task.Delay(Timeout.InfiniteTimeSpan, token).ConfigureAwait(false);
+        finally
+        {
+            AnsiConsole.Write(new ControlCode(LiveDisplayCursorSync.BuildRestoreCursorStyleControl()));
+            LiveDisplayCursorSync.Detach();
+        }
     }
 
     private async Task<ConsoleViewResult> RenderComponentInternalAsync(CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        await _renderSemaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
+        await _renderLock.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
             var parameterView = CreateParameterView();
@@ -153,7 +163,7 @@ internal class ComponentService<[DynamicallyAccessedMembers(DynamicallyAccessedM
         }
         finally
         {
-            _renderSemaphore.Release();
+            _renderLock.Release();
         }
     }
 

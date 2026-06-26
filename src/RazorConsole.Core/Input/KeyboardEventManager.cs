@@ -280,6 +280,25 @@ internal sealed class KeyboardEventManager
         return buffer.ToString();
     }
 
+    /// <summary>
+    /// 1-based terminal column for the hardware caret inside a focused TextInput panel.
+    /// </summary>
+    internal int GetTextInputCaretColumn(FocusManager.FocusTarget target)
+    {
+        const int contentStartColumn = 3;
+
+        var buffer = GetOrCreateBuffer(target);
+        var displayLength = buffer.Length;
+        if (displayLength == 0
+            && target.Attributes.TryGetValue("data-placeholder", out var placeholder)
+            && !string.IsNullOrEmpty(placeholder))
+        {
+            displayLength = placeholder.Length;
+        }
+
+        return contentStartColumn + displayLength;
+    }
+
     private StringBuilder GetOrCreateBuffer(FocusManager.FocusTarget target)
     {
         return _buffers.GetOrAdd(target.Key, _ => new StringBuilder(ResolveInitialValue(target)));

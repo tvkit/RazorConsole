@@ -22,6 +22,20 @@ public static class AnsiSequences
     /// </remarks>
     public const int DECTCEM = 25;
 
+    /// <summary>Blinking block cursor (DECSCUSR).</summary>
+    public const int CursorBlinkBlock = 1;
+
+    /// <summary>Default terminal cursor shape (DECSCUSR).</summary>
+    public const int CursorDefault = 0;
+
+    /// <summary>
+    /// Sets the text cursor style (DECSCUSR).
+    /// </summary>
+    /// <remarks>
+    /// See <see href="https://invisible-island.net/xterm/ctlseqs/ctlseqs.html"/>.
+    /// </remarks>
+    public static string SetCursorStyle(int style) => $"{CSI}{style} q";
+
     /// <summary>
     /// This control function selects one or more character attributes at the same time.
     /// </summary>

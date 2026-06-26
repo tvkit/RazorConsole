@@ -1,49 +1,56 @@
 // Copyright (c) RazorConsole. All rights reserved.
 
+using RazorConsole.Core.Rendering;
+using Spectre.Console;
 using Spectre.Console.Rendering;
 using static RazorConsole.Core.Utilities.AnsiSequences;
 
 namespace RazorConsole.Core.Renderables;
 
-internal class DiffRenderable
-    : Renderable
+internal class DiffRenderable : Renderable
 {
-    private readonly SemaphoreSlim _semaphore = new(1, 1);
+    // Cannot use Lock for NET9+ because Render method uses yield return which is incompatible with Lock.Scope
+    private readonly object _lock = new();
+    private readonly IAnsiConsole _console;
     private IRenderable _renderable;
-    private readonly bool _hideCursor;
     private SegmentShape _shape = new(0, 0);
     private List<SegmentLine> _previousLines = new();
     private int _lastMaxWidth = -1;
+
+    public bool DidOverflow { get; private set; }
 
     /// <summary>
     /// Initializes a new instance of the DiffRenderable class to display the differences between two renderable objects
     /// using the specified console.
     /// </summary>
-    public DiffRenderable(IRenderable renderable, bool hideCursor)
+    public DiffRenderable(IAnsiConsole console, IRenderable renderable)
     {
         _renderable = renderable;
-        _hideCursor = hideCursor;
+        _console = console;
     }
 
     public void UpdateRenderable(IRenderable renderable)
     {
-        _semaphore.Wait();
-        try
+        lock (_lock)
         {
             _renderable = renderable;
-        }
-        finally
-        {
-            _semaphore.Release();
         }
     }
 
     protected override IEnumerable<Segment> Render(RenderOptions options, int maxWidth)
     {
-        _semaphore.Wait();
-        try
+        // Cannot use Lock.Scope with yield return, must use regular lock
+        lock (_lock)
         {
             yield return Segment.Control(RM(DECTCEM));
+            DidOverflow = false;
+
+            // LiveDisplayCursorSync parks the hardware cursor inside TextInput at end-of-frame.
+            // Reset to below the previous frame before incremental CUU positioning.
+            if (_previousLines.Count > 0 && _shape.Height > 0)
+            {
+                yield return Segment.Control(CUP(_shape.Height + 1, 1));
+            }
 
             bool widthChanged = _lastMaxWidth != -1 && _lastMaxWidth != maxWidth;
             _lastMaxWidth = maxWidth;
@@ -52,10 +59,15 @@ internal class DiffRenderable
             var segmentLines = Segment.SplitLines(segments);
             var shape = SegmentShape.Calculate(options, segmentLines);
 
-            var previousLines = _previousLines;
-            var totalLines = segmentLines.Count;
+            // Check for overflow
+            if (shape.Height > options.ConsoleSize.Height || shape.Width > options.ConsoleSize.Width)
+            {
+                DidOverflow = true;
+            }
 
-            int renderFromLine;
+            var previousLines = _previousLines ?? EmptyLines;
+            var totalLines = segmentLines.Count;
+            var renderFromLine = 0;
             for (renderFromLine = 0; renderFromLine < totalLines; renderFromLine++)
             {
                 var line = segmentLines[renderFromLine];
@@ -134,15 +146,7 @@ internal class DiffRenderable
             // Update the previous lines for next comparison
             _previousLines = CloneLines(segmentLines);
             _shape = shape;
-
-            if (!_hideCursor)
-            {
-                yield return Segment.Control(SM(DECTCEM));
-            }
-        }
-        finally
-        {
-            _semaphore.Release();
+            yield return Segment.Control(LiveDisplayCursorSync.BuildEndOfFrameCursorControl(maxWidth));
         }
     }
 
