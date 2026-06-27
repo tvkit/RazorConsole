@@ -51,6 +51,11 @@ internal static class LiveDisplayCursorSync
             return RM(DECTCEM);
         }
 
+        if (ShouldHideCursor(target))
+        {
+            return RM(DECTCEM);
+        }
+
         var column = Math.Clamp(_keyboardEventManager.GetTextInputCaretColumn(target), 1, Math.Max(1, maxWidth));
         return CUU(2) + CUF(column - 1) + SetCursorStyle(CursorBlinkBlock) + SM(DECTCEM);
     }
@@ -61,4 +66,8 @@ internal static class LiveDisplayCursorSync
     private static bool IsTextInput(FocusManager.FocusTarget target) =>
         target.Attributes.TryGetValue("data-text-input", out var flag)
         && string.Equals(flag, "true", StringComparison.OrdinalIgnoreCase);
+
+    private static bool ShouldHideCursor(FocusManager.FocusTarget target) =>
+        target.Attributes.TryGetValue("data-hide-cursor", out var hide)
+        && string.Equals(hide, "true", StringComparison.OrdinalIgnoreCase);
 }
