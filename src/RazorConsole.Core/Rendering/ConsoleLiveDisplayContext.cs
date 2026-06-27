@@ -117,6 +117,11 @@ public sealed class ConsoleLiveDisplayContext : IDisposable, IObserver<ConsoleRe
     public void Refresh() => _canvas.Refresh();
 
     /// <summary>
+    /// Hides the hardware cursor on the focused text input without waiting for VDOM attribute diffs.
+    /// </summary>
+    public void SetHideInputCursor(bool hide) => LiveDisplayCursorSync.SetForceHideInputCursor(hide);
+
+    /// <summary>
     /// Replaces the live display target with a custom renderable.
     /// </summary>
     /// <param name="renderable">The renderable to display.</param>

@@ -13,6 +13,7 @@ internal static class LiveDisplayCursorSync
 {
     private static FocusManager? _focusManager;
     private static KeyboardEventManager? _keyboardEventManager;
+    private static bool _forceHideInputCursor;
 
     internal static void Attach(FocusManager focusManager, KeyboardEventManager keyboardEventManager)
     {
@@ -22,9 +23,12 @@ internal static class LiveDisplayCursorSync
 
     internal static void Detach()
     {
+        _forceHideInputCursor = false;
         _focusManager = null;
         _keyboardEventManager = null;
     }
+
+    internal static void SetForceHideInputCursor(bool hide) => _forceHideInputCursor = hide;
 
     /// <summary>
     /// Builds the ANSI control sequence to emit at the end of a diff frame.
@@ -68,6 +72,7 @@ internal static class LiveDisplayCursorSync
         && string.Equals(flag, "true", StringComparison.OrdinalIgnoreCase);
 
     private static bool ShouldHideCursor(FocusManager.FocusTarget target) =>
-        target.Attributes.TryGetValue("data-hide-cursor", out var hide)
-        && string.Equals(hide, "true", StringComparison.OrdinalIgnoreCase);
+        _forceHideInputCursor
+        || (target.Attributes.TryGetValue("data-hide-cursor", out var hide)
+            && string.Equals(hide, "true", StringComparison.OrdinalIgnoreCase));
 }
