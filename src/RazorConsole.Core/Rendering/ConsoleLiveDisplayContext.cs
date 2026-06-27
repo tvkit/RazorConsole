@@ -112,6 +112,11 @@ public sealed class ConsoleLiveDisplayContext : IDisposable, IObserver<ConsoleRe
     }
 
     /// <summary>
+    /// Re-renders the current live display frame (for example to refresh cursor placement).
+    /// </summary>
+    public void Refresh() => _canvas.Refresh();
+
+    /// <summary>
     /// Replaces the live display target with a custom renderable.
     /// </summary>
     /// <param name="renderable">The renderable to display.</param>
